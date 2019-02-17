@@ -1,0 +1,122 @@
+version: "3"
+services:
+  zookeeper:
+    image: "confluentinc/cp-zookeeper:${KCU_CONFLUENT_KAFKA_VERSION:-latest}"
+    environment:
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SERVERS: 1.1.1.2:2888:3888
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: 1.1.1.2
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
+      KAFKA_TOOLS_LOG4J_LOGLEVEL: WARN
+    container_name: zookeeper
+    volumes:
+      - ./volumes/zookeeper/zk-data:/var/lib/zookeeper/data
+      - ./volumes/zookeeper/zk-txn-logs:/var/lib/zookeeper/log
+    networks:
+      kcu_net:
+        ipv4_address: 1.1.1.2
+    # logging:
+    #   driver: "none"
+
+  kafka1:
+    image: "confluentinc/cp-kafka:${KCU_CONFLUENT_KAFKA_VERSION:-latest}"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://1.1.1.3:9092
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: 1.1.1.3
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
+      KAFKA_TOOLS_LOG4J_LOGLEVEL: WARN
+    container_name: kafka1
+    volumes:
+      - ./volumes/kafka/broker1:/var/lib/kafka/data
+    networks:
+      kcu_net:
+        ipv4_address: 1.1.1.3
+    depends_on:
+      - zookeeper
+    # logging:
+    #   driver: "none"
+
+  kafka2:
+    image: "confluentinc/cp-kafka:${KCU_CONFLUENT_KAFKA_VERSION:-latest}"
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://1.1.1.4:9092
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: 1.1.1.4
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
+      KAFKA_TOOLS_LOG4J_LOGLEVEL: WARN
+    container_name: kafka2
+    volumes:
+      - ./volumes/kafka/broker2:/var/lib/kafka/data
+    networks:
+      kcu_net:
+        ipv4_address: 1.1.1.4
+    depends_on:
+      - zookeeper
+      - kafka1
+    # logging:
+    #   driver: "none"
+
+  kafka3:
+    image: "confluentinc/cp-kafka:${KCU_CONFLUENT_KAFKA_VERSION:-latest}"
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://1.1.1.5:9092
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: 1.1.1.5
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
+      KAFKA_TOOLS_LOG4J_LOGLEVEL: WARN
+    container_name: kafka3
+    volumes:
+      - ./volumes/kafka/broker3:/var/lib/kafka/data
+    networks:
+      kcu_net:
+        ipv4_address: 1.1.1.5
+    depends_on:
+      - zookeeper
+      - kafka1
+      - kafka2
+    # logging:
+    #   driver: "none"
+
+  kafka-manager:
+    image: sheepkiller/kafka-manager:latest
+    environment:
+      ZK_HOSTS: zookeeper:2181
+      KM_ARGS: -Djava.net.preferIPv4Stack=true
+    container_name: kafka-manager
+    networks:
+      kcu_net:
+        ipv4_address: 1.1.1.6
+    depends_on:
+      - zookeeper
+      - kafka1
+      - kafka2
+      - kafka3
+
+  consul:
+     image: consul:latest
+     container_name: consul
+     networks:
+       kcu_net:
+         ipv4_address: 1.1.1.7
+     logging:
+       driver: none
+
+networks:
+  kcu_net:
+    ipam:
+      driver: default
+      config:
+      - subnet: 1.1.1.0/24
+#        gateway: 1.1.1.254

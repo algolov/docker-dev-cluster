@@ -1,0 +1,31 @@
+version: "3"
+services:
+ prom:
+   image: quay.io/prometheus/prometheus:latest
+   volumes:
+    - ./volumes/prometheus:/etc/prometheus
+   command: "--config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus --web.enable-admin-api"
+   depends_on:
+    - consul
+   container_name: prom
+   networks:
+     kcu_net:
+       ipv4_address: 1.1.1.8
+#   logging:
+#     driver: none
+
+ grafana:
+   image: grafana/grafana:latest
+   user: ${KCU_CUR_USER}
+   volumes:
+     - ./volumes/grafana/data:/var/lib/grafana
+     - ./volumes/grafana/dashboards:/var/lib/grafana/dashboards
+     - ./volumes/grafana/provisioning/:/etc/grafana/provisioning
+   depends_on:
+     - prom
+   container_name: grafana
+   networks:
+     kcu_net:
+       ipv4_address: 1.1.1.9
+#   logging:
+#     driver: none
